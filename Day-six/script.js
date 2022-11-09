@@ -84,6 +84,27 @@ const game = {
   },
 };
 
+// 1. Solution
+for (const [i, player] of game.scored.entries()) {
+  console.log(`Goal ${i + 1} : ${player}`);
+}
+// 2. Solution
+const odds = Object.values(game.odds);
+let average = 0;
+for (const odd of odds) {
+  average += odd;
+  average /= odds.length;
+}
+console.log(average);
+
+// 3. Solution
+for (const [team, odd] of Object.entries(game.odds)) {
+  const teamStr = team === "x" ? "draw" : `Victory ${game[team]}`;
+  console.log(`Odd of ${teamStr} ${odd}`);
+}
+
+// 4. Solution
+
 /*
 const properties = Object.keys(openingHours);
 console.log(properties);
