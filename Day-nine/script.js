@@ -4,9 +4,22 @@
 // Data
 const account1 = {
   owner: "Jonas Schmedtmann",
-  movements: [200, 450, -400, 3000, -650, -130, 70, 1300],
+  movements: [200, 455.23, -306.5, 25000, -642.21, -133.9, 79.97, 1300],
   interestRate: 1.2, // %
   pin: 1111,
+
+  movementsDates: [
+    "2019-11-18T21:31:17.178Z",
+    "2019-12-23T07:42:02.383Z",
+    "2022-01-28T09:15:04.904Z",
+    "2022-04-01T10:17:24.185Z",
+    "2022-05-08T14:11:59.604Z",
+    "2022-11-12T17:01:17.194Z",
+    "2022-11-10T23:36:17.929Z",
+    "2022-11-08T10:51:36.790Z",
+  ],
+  currency: "EUR",
+  locale: "pt-PT", // de-DE
 };
 
 const account2 = {
@@ -14,23 +27,22 @@ const account2 = {
   movements: [5000, 3400, -150, -790, -3210, -1000, 8500, -30],
   interestRate: 1.5,
   pin: 2222,
+
+  movementsDates: [
+    "2019-11-01T13:15:33.035Z",
+    "2019-11-30T09:48:16.867Z",
+    "2019-12-25T06:04:23.907Z",
+    "2022-01-25T14:18:46.235Z",
+    "2022-02-05T16:33:06.386Z",
+    "2022-04-10T14:43:26.374Z",
+    "2022-11-10T18:49:59.371Z",
+    "2022-11-08T12:01:20.894Z",
+  ],
+  currency: "USD",
+  locale: "en-US",
 };
 
-const account3 = {
-  owner: "Steven Thomas Williams",
-  movements: [200, -200, 340, -300, -20, 50, 400, -460],
-  interestRate: 0.7,
-  pin: 3333,
-};
-
-const account4 = {
-  owner: "Sarah Smith",
-  movements: [430, 1000, 700, 50, 90],
-  interestRate: 1,
-  pin: 4444,
-};
-
-const accounts = [account1, account2, account3, account4];
+const accounts = [account1, account2];
 
 // Elements label
 const labelWelcome = document.querySelector(".welcome");
@@ -61,17 +73,56 @@ const inputLoanAmount = document.querySelector(".form__input--loan-amount");
 const inputCloseUsername = document.querySelector(".form__input--user");
 const inputClosePin = document.querySelector(".form__input--pin");
 
-const displayMovements = function (movements, sort = false) {
+//////////////////////////////////////////////////////////////////
+///////////////////Functions////////////////////////
+//////////////////////////////////////////////////////////////////
+
+const displayMoventsDate = function (date, locale) {
+  const calDaysPassed = (date1, date2) =>
+    Math.round(Math.abs(date2 - date1) / (1000 * 60 * 60 * 24));
+
+  const daysPassed = calDaysPassed(new Date(), date);
+  //console.log(daysPassed);
+
+  if (daysPassed === 0) return "Today";
+  if (daysPassed === 1) return "Yesterday";
+  if (daysPassed <= 7) return `${daysPassed} days ago`;
+
+  // const day = `${date.getDate()}`.padStart(2, 0);
+  // const month = `${date.getMonth() + 1}`.padStart(2, 0);
+  // const year = date.getFullYear();
+
+  return new Intl.DateTimeFormat(locale).format(date);
+};
+
+// Currency format
+
+const formatCur = function (value, locale, currency) {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currency,
+  }).format(value);
+};
+
+const displayMovements = function (acc, sort = false) {
   containerMovements.innerHTML = "";
 
-  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+  const movs = sort
+    ? acc.movements.slice().sort((a, b) => a - b)
+    : acc.movements;
 
   movs.forEach(function (mov, i) {
     const type = mov > 0 ? "deposit" : "withdrawal";
 
+    const date = new Date(acc.movementsDates[i]);
+    const displayDate = displayMoventsDate(date, acc.locale);
+
+    const formattedMov = formatCur(mov, acc.locale, acc.currency);
+
     const html = `<div class="movements__row">
     <div class="movements__type movements__type--${type}">${i + 1} ${type}</div>
-    <div class="movements__value">${mov}€</div>
+    <div class="movements__date">${displayDate}</div>
+    <div class="movements__value">${formattedMov}</div>
   </div>`;
     containerMovements.insertAdjacentHTML("afterbegin", html);
   });
@@ -81,7 +132,7 @@ const displayMovements = function (movements, sort = false) {
 
 const calcDisplayBlance = function (acc) {
   acc.balance = acc.movements.reduce((acc, mov) => acc + mov, 0);
-  labelBalance.textContent = `${acc.balance} EUR`;
+  labelBalance.textContent = formatCur(acc.balance, acc.locale, acc.currency);
 };
 
 // const calcDisplayBalance = function (acc) {
@@ -94,12 +145,12 @@ const calcDisplaySum = function (acc) {
   const incomes = acc.movements
     .filter((mov) => mov > 0)
     .reduce((acc, mov) => acc + mov, 0);
-  labelSumIn.textContent = `${incomes}€`;
+  labelSumIn.textContent = formatCur(incomes, acc.locale, acc.currency);
 
   const out = acc.movements
     .filter((mov) => mov < 0)
     .reduce((acc, mov) => acc + mov, 0);
-  labelSumOut.textContent = `${Math.abs(out)}€`;
+  labelSumOut.textContent = formatCur(Math.abs(out), acc.locale, acc.currency);
 
   const interest = acc.movements
     .filter((mov) => mov > 0)
@@ -110,7 +161,11 @@ const calcDisplaySum = function (acc) {
 
     .reduce((acc, int) => acc + int, 0);
 
-  labelSumInterest.textContent = `${Math.abs(interest)}€`;
+  labelSumInterest.textContent = formatCur(
+    Math.abs(interest),
+    acc.locale,
+    acc.currency
+  );
 };
 
 //calcDisplaySum(account1.movements);
@@ -128,7 +183,7 @@ createUsernames(accounts);
 
 const displayUI = function (acc) {
   //Display Movements
-  displayMovements(acc.movements);
+  displayMovements(acc);
   //Display Balance
   calcDisplayBlance(acc);
   //Display Summary
@@ -136,6 +191,35 @@ const displayUI = function (acc) {
 };
 
 let currentAccount;
+
+const startLogOutTimer = function () {
+  // Set time to 5 Minutes
+  let time = 10;
+
+  // Call the timer every second
+  const timer = setInterval(function () {
+    const min = String(Math.trunc(time / 60)).padStart(2, 0);
+    const sec = String(time % 60).padStart(2, 0);
+    // each call
+    labelTimer.textContent = `${min}:${sec}`;
+    // Decrease 1s
+    time--;
+    // When 0 second logout the page
+
+    if (time === 0) {
+      clearInterval(timer);
+      labelWelcome.textContent = "Log in to get started..";
+      containerApp.style.opacity = 0;
+    }
+  }, 1000);
+};
+
+///FAKE Always logged in
+// currentAccount = account1;
+// displayUI(currentAccount);
+// containerApp.style.opacity = 100;
+
+/// Experimenting API
 
 btnLogin.addEventListener("click", function (e) {
   e.preventDefault();
@@ -145,8 +229,8 @@ btnLogin.addEventListener("click", function (e) {
   );
   console.log(currentAccount);
 
-  if (currentAccount?.pin === Number(inputLoginPin.value)) {
-    console.log("LOGIN");
+  if (currentAccount?.pin === +inputLoginPin.value) {
+    //console.log("LOGIN");
 
     //Display UI And Message
     labelWelcome.textContent = `Welcome back, ${
@@ -155,9 +239,40 @@ btnLogin.addEventListener("click", function (e) {
 
     containerApp.style.opacity = 100;
 
+    const now = new Date();
+    const options = {
+      hour: "numeric",
+      minute: "numeric",
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+      //weekday: "long",
+    };
+
+    // const locale = navigator.language;
+    // console.log(locale);
+
+    labelDate.textContent = new Intl.DateTimeFormat(
+      currentAccount.locale,
+      options
+    ).format(now);
+
+    // Current Date
+    // const day = `${now.getDate()}`.padStart(2, 0);
+    // const month = `${now.getMonth() + 1}`.padStart(2, 0);
+    // const year = now.getFullYear();
+    // const hour = `${now.getHours()}`.padStart(2, 0);
+    // const min = `${now.getMinutes()}`.padStart(2, 0);
+
+    // labelDate.textContent = `${day}/${month}/${year}, ${hour}:${min}`;
+
     //Clear Display inpur fields
     inputLoginUsername.value = inputLoginPin.value = "";
     inputLoginPin.blur();
+
+    //Update timer
+
+    startLogOutTimer();
 
     //Display UI
     displayUI(currentAccount);
@@ -169,7 +284,7 @@ btnLogin.addEventListener("click", function (e) {
 btnTransfer.addEventListener("click", function (e) {
   e.preventDefault();
 
-  const amount = Number(inputTransferAmount.value);
+  const amount = +inputTransferAmount.value;
   const recivedAcc = accounts.find(
     (acc) => acc.username === inputTransferTo.value
   );
@@ -187,6 +302,10 @@ btnTransfer.addEventListener("click", function (e) {
     currentAccount.movements.push(-amount);
     recivedAcc.movements.push(amount);
 
+    // Add transfer Date
+    currentAccount.movementsDates.push(new Date().toDateString());
+    recivedAcc.movementsDates.push(new Date().toDateString());
+
     //Display UI
     displayUI(currentAccount);
   }
@@ -197,17 +316,23 @@ btnTransfer.addEventListener("click", function (e) {
 btnLoan.addEventListener("click", function (e) {
   e.preventDefault();
 
-  const amount = Number(inputLoanAmount.value);
+  const amount = Math.floor(inputLoanAmount.value);
 
   if (
     amount > 0 &&
     currentAccount.movements.some((mov) => mov >= amount * 0.1)
   ) {
-    //Add Movement
-    currentAccount.movements.push(amount);
+    setTimeout(function () {
+      //Add Movement
+      currentAccount.movements.push(amount);
 
-    //Update UI
-    displayUI(currentAccount);
+      // Create the dates
+
+      currentAccount.movementsDates.push(new Date().toDateString());
+
+      //Update UI
+      displayUI(currentAccount);
+    }, 2500);
   }
   inputLoanAmount.value = "";
 });
@@ -219,7 +344,7 @@ btnClose.addEventListener("click", function (e) {
 
   if (
     inputCloseUsername.value == currentAccount.username &&
-    Number(inputClosePin.value) === currentAccount.pin
+    +inputClosePin.value === currentAccount.pin
   ) {
     const index = accounts.findIndex(
       (acc) => acc.username === currentAccount.username
@@ -242,282 +367,89 @@ btnSort.addEventListener("click", function (e) {
   sorted = !sorted;
 });
 
-///////////////////////////////
-// Coding Challenge #4
-
-const dogs = [
-  { weight: 22, curFood: 250, owners: ["Alice", "Bob"] },
-  { weight: 8, curFood: 200, owners: ["Matilda"] },
-  { weight: 13, curFood: 275, owners: ["Sarah", "John"] },
-  { weight: 32, curFood: 340, owners: ["Michael"] },
-];
-
-// Solution 1
-
-dogs.forEach((dog) => (dog.recfood = Math.trunc(dog.weight ** 0.75 * 28)));
-console.log(dogs);
-
-// Solution 2
-const dogSara = dogs.find((dog) => dog.owners.includes("Sarah"));
-console.log(dogSara);
-console.log(
-  `Sarah's dog is eating ${
-    dogSara.curFood > dogSara.recfood ? "Much" : "little"
-  }`
-);
-
-// Solution 3
-const ownersEatTooMuch = dogs
-  .filter((dog) => dog.curFood > dog.recfood)
-  .flatMap((dog) => dog.owners);
-// .flat();
-console.log(ownersEatTooMuch);
-
-const ownersEatToolittle = dogs
-  .filter((dog) => dog.curFood < dog.recfood)
-  .flatMap((dog) => dog.owners);
-// .flat();
-console.log(ownersEatToolittle);
-
-// Solution 4
-console.log(`${ownersEatTooMuch.join(" and ")},s dongs eat too much!`);
-console.log(`${ownersEatToolittle.join(" and ")},s dongs eat too Littles!`);
-
-// Solution 5
-console.log(dogs.some((dog) => dog.curFood === dog.recfood));
-
-// Solution 6
-const checkEatingOKay = (dog) =>
-  dog.curFood > dog.recfood * 0.9 && dog.curFood < dog.recfood * 1.1;
-
-console.log(dogs.some(checkEatingOKay));
-
-// Solution 7
-console.log(dogs.filter(checkEatingOKay));
-
-// Solution 8
-
-const dogSorted = dogs.slice().sort((a, b) => a.recfood - b.recfood);
-console.log(dogSorted);
-
-////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////
+///////////////////////
 /*
-// Array Methods Practice
+///////////////////////////////////////
+// Math and Rounding
+console.log(Math.sqrt(25));
+console.log(25 ** (1 / 2));
+console.log(8 ** (1 / 3));
+console.log(Math.max(5, 18, 23, 11, 2));
+console.log(Math.max(5, 18, "23", 11, 2));
+console.log(Math.max(5, 18, "23px", 11, 2));
+console.log(Math.min(5, 18, 23, 11, 2));
+console.log(Math.PI * Number.parseFloat("10px") ** 2);
+console.log(Math.trunc(Math.random() * 6) + 1);
+const randomInt = (min, max) =>
+  Math.floor(Math.random() * (max - min) + 1) + min;
+// 0...1 -> 0...(max - min) -> min...max
+// console.log(randomInt(10, 20));
 
-const bankDepositSum = accounts
-  .flatMap((acc) => acc.movements)
-  .filter((mov) => mov > 0)
-  .reduce((sum, curr) => sum + curr, 0);
-console.log(bankDepositSum);
-
-//2
-const numDeposit100 = accounts
-  .flatMap((acc) => acc.movements)
-  .filter((mov) => mov >= 1000).length;
-console.log(numDeposit100);
-*/
-///Extra work
-// const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
-
-// const eurToUsd = 1.1;
-//console.log(movements);
-
-/*
-
-///////////////////////////////
-// Coding Challenge #3
-
-const calcAverageHumanAge = function (ages) {
-  const humanAges = ages.map((age) => (age <= 2 ? 2 * age : 16 + age * 4));
-
-  const adults = humanAges.filter((age) => age >= 18);
-
-  const average =
-    adults.reduce((acc, age, i, arr) => acc + age, 0) / arr.length;
-  return average;
-};
-
-const calcAverageHumanAgeN = (ages) =>
-  ages
-    .map((age) => (age <= 2 ? 2 * age : 16 + age * 4))
-    .filter((age) => age >= 18)
-    .reduce((acc, age, i, arr) => acc + age / arr.length, 0);
-
-const calcHuman = calcAverageHumanAgeN([5, 2, 4, 1, 15, 8, 3]);
-console.log(calcHuman);
-*/
-/*
-//Pipeline
-
-const totalDepositsUSD = movements
-  .filter((mov) => mov > 0)
-  .map((mov, i, arr) => {
-    return mov * eurToUsd;
-  })
-  .reduce((acc, mov) => acc + mov, 0);
-*/
-/*
-///////////////////////////////
-// Coding Challenge #2
-
-const calcAverageHumanAge = function (ages) {
-  const humanAges = ages.map((age) => (age <= 2 ? 2 * age : 16 + age * 4));
-  console.log(humanAges);
-
-  const adults = humanAges.filter((age) => age >= 18);
-  console.log(adults);
-
-  const average = adults.reduce((acc, age) => acc + age, 0) / adults.length;
-  return average;
-};
-
-const calcHuman = calcAverageHumanAge([5, 2, 4, 1, 15, 8, 3]);
-console.log(calcHuman);
-*/
-// Maximum Value
-
-// const max = movements.reduce((acc, mov) => {
-//   if (acc > mov) return acc;
-//   else return mov;
-// }, movements[0]);
-
-// console.log(max);
-
-//// Accumulatero -> Snowball
-
-// const balance = movements.reduce(function (acc, cur, i, arr) {
-//   console.log(`Iteration ${i}: ${acc}`);
-//   return acc + cur;
-// }, 0);
-
-// const balance = movements.reduce((acc, cur) => acc + cur, 0);
-
-// console.log(balance);
-
-// let balance2 = 0;
-// for (const mov of movements) balance2 += mov;
-// console.log(balance2);
-
-/*
-const deposits = movements.filter(function (mov) {
-  return mov > 0;
-});
-console.log(movements);
-console.log(deposits);
-
-const depositFor = [];
-
-for (const move of movements) {
-  if (move > 0) {
-    depositFor.push(move);
-  }
-}
-console.log(depositFor);
-
-const withdrawals = movements.filter((mov) => mov < 0);
-console.log(withdrawals);
-*/
-/*
-///////////////////////////////
-// Coding Challenge #1
-
-const checkDogs = function (dogsJulia, dogsKate) {
-  const dogsJuliaCorrected = dogsJulia.slice();
-  dogsJuliaCorrected.splice(0, 1);
-  dogsJuliaCorrected.splice(-2);
-
-  const dogs = dogsJuliaCorrected.concat(dogsKate);
-  console.log(dogs);
-
-  dogs.forEach(function (dog, i) {
-    if (dog >= 3) {
-      console.log(`Dog number ${i + 1} is an adult, and is ${dog} years old`);
-    } else {
-      console.log(`Dog number ${i + 1} is an still a puppy`);
-    }
+// Rounding decimals
+console.log((2.7).toFixed(0));
+console.log((2.7).toFixed(3));
+console.log((2.345).toFixed(2));
+console.log(+(2.345).toFixed(2));
+///////////////////////////////////////
+// The Remainder Operator
+console.log(5 % 2);
+console.log(5 / 2); // 5 = 2 * 2 + 1
+console.log(8 % 3);
+console.log(8 / 3); // 8 = 2 * 3 + 2
+console.log(6 % 2);
+console.log(6 / 2);
+console.log(7 % 2);
+console.log(7 / 2);
+const isEven = (n) => n % 2 === 0;
+console.log(isEven(8));
+console.log(isEven(23));
+console.log(isEven(514));
+labelBalance.addEventListener("click", function () {
+  [...document.querySelectorAll(".movements__row")].forEach(function (row, i) {
+    // 0, 2, 4, 6
+    if (i % 2 === 0) row.style.backgroundColor = "orangered";
+    // 0, 3, 6, 9
+    if (i % 3 === 0) row.style.backgroundColor = "blue";
   });
-};
-
-checkDogs([3, 5, 2, 12, 1, 7], [4, 1, 15, 8, 3]);
-*/
-/*
-
-// Simple Array Methods
-let arr = ["a", "b", "c", "d", "e"];
-// SLICE
-console.log(arr.slice(2));
-console.log(arr.slice(2, 4));
-console.log(arr.slice(-2));
-console.log(arr.slice(-1));
-console.log(arr.slice(1, -2));
-console.log(arr.slice());
-console.log([...arr]);
-// SPLICE
-// console.log(arr.splice(2));
-arr.splice(-1);
-console.log(arr);
-arr.splice(1, 2);
-console.log(arr);
-// REVERSE
-arr = ["a", "b", "c", "d", "e"];
-const arr2 = ["j", "i", "h", "g", "f"];
-console.log(arr2.reverse());
-console.log(arr2);
-// CONCAT
-const letters = arr.concat(arr2);
-console.log(letters);
-console.log([...arr, ...arr2]);
-// JOIN
-console.log(letters.join(" - "));
-
-*/
-
-// const arr = [23, 11, 64];
-// console.log(arr[0]);
-// console.log(arr);
-
-/*
-const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
-
-for (const [i, movement] of movements.entries()) {
-  if (movement > 0) {
-    console.log(`Movement ${i + 1}: You deposited ${movement}`);
-  } else {
-    console.log(`Movement ${i + 1}: You Withdrew ${Math.abs(movement)}`);
-  }
-}
-
-console.log("------------FOR EACH-----------");
-
-movements.forEach(function (mov, i, arr) {
-  if (mov > 0) {
-    console.log(`Movement ${i + 1}: You deposited ${mov}`);
-  } else {
-    console.log(`Movement ${i + 1}: You Withdrew ${Math.abs(mov)}`);
-  }
-});
-
-*/
-/*
-// Map
-const currencies = new Map([
-  ["USD", "United States dollar"],
-  ["EUR", "Euro"],
-  ["GBP", "Pound steling"],
-]);
-
-currencies.forEach(function (value, key, map) {
-  console.log(`${key}: ${value}`);
-});
-
-// Sets
-
-const currencieUnique = new Set(["USD", "GBP", "USD", "EUR", "EUR"]);
-console.log(currencieUnique);
-
-currencieUnique.forEach(function (value, _, map) {
-  console.log(`${value}: ${value}`);
 });
 */
+/*
+console.log(2 ** 53 - 1);
+console.log(Number.MAX_SAFE_INTEGER);
+console.log(2 ** 53 + 1);
+console.log(2 ** 53 + 2);
+console.log(2 ** 53 + 3);
+console.log(2 ** 53 + 4);
+console.log(4838430248342043823408394839483204n);
+console.log(BigInt(48384302));
+*/
+
+/////Create a Date
+// const now = new Date();
+// console.log(now);
+
+// console.log(new Date(account1.movementsDates[0]));
+
+//
+
+// Working with dates
+// const future = new Date(2037, 10, 19, 15, 23);
+// console.log(future);
+// console.log(future.getFullYear());
+// console.log(future.getMonth());
+// console.log(future.getDate());
+// console.log(future.getDay());
+// console.log(future.getHours());
+// console.log(future.getMinutes());
+// console.log(future.getSeconds());
+// console.log(future.toISOString());
+// console.log(future.getTime());
+
+// const future = new Date(2037, 10, 19, 15, 23);
+// console.log(+future);
+
+// const calDaysPassed = (date1, date2) =>
+//   Math.abs(date2 - date1) / (1000 * 60 * 60 * 24);
+
+// const days1 = calDaysPassed(new Date(2037, 3, 4), new Date(2037, 3, 14));
+// console.log(days1);
